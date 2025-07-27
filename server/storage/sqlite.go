@@ -31,7 +31,8 @@ func (s *SQLiteStorage) init() {
 
 func (s *SQLiteStorage) StoreTemperature(r TemperatureReading) error {
 	_, err := s.db.Exec(`INSERT INTO temperatures (client_id, timestamp, temperature_c) VALUES (?, ?, ?)`,
-		r.ClientID, r.Timestamp, r.TemperatureC)
+		r.ClientID, r.Timestamp.Format(time.RFC3339Nano), r.TemperatureC)
+
 	return err
 }
 
@@ -54,7 +55,14 @@ func (s *SQLiteStorage) GetTodaysTemperatures(clientID string) ([]TemperatureRea
 }
 
 func (s *SQLiteStorage) GetLastReadingTime(clientID string) (time.Time, error) {
-	var ts time.Time
-	err := s.db.QueryRow(`SELECT MAX(timestamp) FROM temperatures WHERE client_id = ?`, clientID).Scan(&ts)
+	var tsStr string
+	err := s.db.QueryRow(`SELECT MAX(timestamp) FROM temperatures WHERE client_id = ?`, clientID).Scan(&tsStr)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if tsStr == "" {
+		return time.Time{}, nil // no data
+	}
+	ts, err := time.Parse(time.RFC3339Nano, tsStr)
 	return ts, err
 }

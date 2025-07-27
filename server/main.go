@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 
 	"github.com/tnosaj/sar-temp/server/handler"
 	"github.com/tnosaj/sar-temp/server/storage"
@@ -25,22 +24,13 @@ func main() {
 
 	h := &handler.Handler{Store: store}
 
-	// Serve static frontend (e.g., /static/index.html)
-	staticDir := "static"
-	fs := http.FileServer(http.Dir(staticDir))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
-
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		accept := r.Header.Get("Accept")
-		if r.URL.Query().Has("client_id") || accept == "application/json" {
-			requireAPIKey(apiKey, h.GetDashboard)(w, r)
-			return
-		}
-		// Serve HTML dashboard page
-		http.ServeFile(w, r, filepath.Join(staticDir, "index.html"))
+		http.ServeFile(w, r, "static/index.html")
 	})
 
 	http.HandleFunc("/api/temperature", requireAPIKey(apiKey, h.PostTemperature))
+	//http.HandleFunc("/api/dashboard", requireAPIKey(apiKey, h.GetDashboard))
+	http.HandleFunc("/api/dashboard", h.GetDashboard)
 
 	// Start server
 	port := os.Getenv("PORT")

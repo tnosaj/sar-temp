@@ -109,7 +109,7 @@
 
     async function loadData() {
       const clientID = document.getElementById("client").value;
-      const res = await fetch(`/?client_id=${clientID}`);
+      const res = await fetch(`/api/dashboard?client_id=${clientID}`);
       if (!res.ok) {
         document.getElementById("status").textContent = "❌ Failed to load data";
         return;
