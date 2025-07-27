@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Temperature Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 600px;
+      margin: auto;
+    }
+
+    canvas {
+      width: 100% !important;
+      max-height: 300px !important;
+    }
+
+    #status {
+      margin-top: 1em;
+    }
+
+    .controls {
+      margin-bottom: 1em;
+    }
+  </style>
+</head>
+<body>
+  <h1>Temperature Dashboard</h1>
+
+  <div class="controls">
+    <label for="client">Client ID:</label>
+    <input type="text" id="client" value="raspi-001">
+    <button onclick="loadData()">Load</button>
+
+    <label style="margin-left: 20px;">
+      <input type="checkbox" id="autoRefreshToggle" checked onchange="toggleAutoRefresh()">
+      Auto-refresh every 60s
+    </label>
+
+    <span id="refresh-info" style="display: block; margin-top: 8px; font-style: italic;"></span>
+    <span id="status" style="display: block; margin-top: 8px; font-style: italic;"></span>
+
+  </div>
+
+  <canvas id="tempChart"></canvas>
+  
+
+  <script>
+    let chart;
+    let autoRefreshInterval;
+    const LIVE_WINDOW_MINUTES = 5;
+
+    function renderChart(labels, data, timestamps) {
+      if (chart) chart.destroy();
+
+      const now = new Date();
+
+      const liveMarkers = timestamps.map(ts => {
+        const readingTime = new Date(ts);
+        const diffMins = (now - readingTime) / 60000;
+        return diffMins <= LIVE_WINDOW_MINUTES ? readingTime.toLocaleTimeString() : null;
+      });
+
+      const ctx = document.getElementById('tempChart').getContext('2d');
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Temperature (°C)',
+              data: data,
+              borderWidth: 2,
+              fill: false,
+              tension: 0.2
+            },
+            {
+              label: 'Now live',
+              data: data.map((v, i) => liveMarkers[i] ? v : null),
+              borderColor: 'red',
+              backgroundColor: 'red',
+              pointStyle: 'circle',
+              radius: 6,
+              pointBorderWidth: 2,
+              type: 'line',
+              showLine: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { title: { display: true, text: 'Time' }},
+            y: { title: { display: true, text: '°C' }}
+          },
+          plugins: {
+            legend: {
+              labels: {
+                filter: (legendItem) => legendItem.datasetIndex === 0
+              }
+            }
+          }
+        }
+      });
+    }
+
+    async function loadData() {
+      const clientID = document.getElementById("client").value;
+      const res = await fetch(`/?client_id=${clientID}`);
+      if (!res.ok) {
+        document.getElementById("status").textContent = "❌ Failed to load data";
+        return;
+      }
+      const json = await res.json();
+
+      const timestamps = json.readings.map(r => r.timestamp);
+      const labels = timestamps.map(ts => new Date(ts).toLocaleTimeString());
+      const temps = json.readings.map(r => r.temperature_c);
+
+      renderChart(labels, temps, timestamps);
+
+      const lastSeen = json.last_seen ? new Date(json.last_seen).toLocaleString() : "never";
+      const refreshedAt = new Date().toLocaleString();
+
+      document.getElementById("status").textContent = `📡 Last reading received: ${lastSeen}`;
+      document.getElementById("refresh-info").textContent = `🔄 Last refreshed: ${refreshedAt}`;
+    }
+
+    function startAutoRefresh() {
+      if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+      autoRefreshInterval = setInterval(loadData, 60 * 1000);
+    }
+
+    function stopAutoRefresh() {
+      if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+      autoRefreshInterval = null;
+    }
+
+    function toggleAutoRefresh() {
+      const enabled = document.getElementById("autoRefreshToggle").checked;
+      if (enabled) {
+        startAutoRefresh();
+      } else {
+        stopAutoRefresh();
+        document.getElementById("refresh-info").textContent += " (paused)";
+      }
+    }
+
+    window.onload = () => {
+      loadData();
+      startAutoRefresh();
+    };
+  </script>
+</body>
+</html>
