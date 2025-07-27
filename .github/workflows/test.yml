@@ -36,8 +36,7 @@ jobs:
         go tool cover -func=coverage.out
 
     - name: Upload Coverage Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: coverage
         path: coverage.out
-
