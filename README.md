@@ -1,6 +1,6 @@
 # 🌡 temp – Raspberry Pi Temperature Monitoring
 
-[![Go Test](https://github.com/myuser/temp/actions/workflows/test.yml/badge.svg)](https://github.com/myuser/temp/actions/workflows/test.yml)
+[![Go Test](https://github.com/tnosaj/sar-temp/actions/workflows/test.yml/badge.svg)](https://github.com/myuser/temp/actions/workflows/test.yml)
 
 > A lightweight client/server system to monitor and visualize temperature data from Raspberry Pi sensors.
 
